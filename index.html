@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -442,6 +441,177 @@
     font-size: 2.5rem;
   }
 
+
+  /* CATCHER SCREEN */
+  #catcher {
+    background: linear-gradient(160deg, #fff0f7 0%, #fde8f0 60%, #fcd5e8 100%);
+  }
+
+  .catcher-title {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: clamp(1.2rem, 4vw, 1.6rem);
+    color: var(--pink-dark);
+    margin-bottom: 0.3rem;
+  }
+
+  .catcher-sub {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    margin-bottom: 1.2rem;
+  }
+
+  #catcher-area {
+    position: relative;
+    width: min(340px, 92vw);
+    height: 320px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(200,80,120,0.15);
+    overflow: hidden;
+    margin-bottom: 1.2rem;
+    touch-action: none;
+  }
+
+  #basket {
+    position: absolute;
+    bottom: 10px;
+    width: 70px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--pink-deep), var(--pink-dark));
+    border-radius: 10px 10px 16px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    box-shadow: 0 4px 12px rgba(200,80,120,0.35);
+    cursor: pointer;
+    user-select: none;
+    transition: left 0.05s;
+    z-index: 10;
+  }
+
+  .falling-letter {
+    position: absolute;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--pink-dark);
+    background: var(--pink-light);
+    border: 2px solid var(--pink-mid);
+    border-radius: 10px;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(200,80,120,0.2);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .falling-letter.bomb {
+    background: #fff3e0;
+    border-color: #ffb74d;
+    color: #e65100;
+    font-size: 1.2rem;
+  }
+
+  #collected-word {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+    min-height: 50px;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .letter-slot {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 2px dashed var(--pink-mid);
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--pink-dark);
+    transition: all 0.3s;
+  }
+
+  .letter-slot.filled {
+    border-style: solid;
+    border-color: var(--pink-deep);
+    background: var(--pink-light);
+    animation: popIn 0.3s ease;
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0.6); }
+    70% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  .lives-bar {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 0.8rem;
+    font-size: 1.2rem;
+  }
+
+  .catcher-instruction {
+    font-size: 0.78rem;
+    color: var(--text-soft);
+    margin-top: 0.3rem;
+  }
+
+  /* WIN SCREEN */
+  #win {
+    background: linear-gradient(150deg, #fff5f9 0%, #fde8f0 50%, #fcd5e8 100%);
+  }
+
+  .win-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 7vw, 3rem);
+    font-style: italic;
+    color: var(--pink-dark);
+    margin-bottom: 0.8rem;
+    line-height: 1.2;
+  }
+
+  .win-sub {
+    font-size: 1.1rem;
+    color: var(--text-soft);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+
+  .win-hearts {
+    font-size: 2.5rem;
+    letter-spacing: 0.3rem;
+    animation: heartbeat 1.5s ease-in-out infinite;
+    display: block;
+    margin-bottom: 1.5rem;
+  }
+
+
+  @keyframes typewriter {
+    from { max-width: 0; }
+    to { max-width: 400px; }
+  }
+  @keyframes blinkCursor {
+    0%, 100% { border-color: var(--pink-deep); }
+    50% { border-color: transparent; }
+  }
+  #win-title-text.typing {
+    animation: typewriter 1.8s steps(18) forwards, blinkCursor 0.6s step-end 5;
+  }
+
 </style>
 </head>
 <body>
@@ -736,8 +906,8 @@
           document.querySelectorAll('.puzzle-piece').forEach(p => p.classList.add('solved-flash'));
           document.getElementById('puzzle-passed-msg').style.display = 'block';
           setTimeout(() => {
-            launchConfetti();
-            showScreen('letter');
+            showScreen('catcher');
+            initCatcher();
           }, 1500);
         }, 200);
       }
@@ -763,8 +933,251 @@
       }, i * 80);
     }
   }
+
+  // ─── CATCHER GAME ──────────────────────────────────────
+  const TARGET_WORD = 'بحبك'; // 4 letters: ب ح ب ك
+  const TARGET_LETTERS = ['ب','ح','ب','ك'];
+  const BOMB_CHAR = '💣';
+  
+  let catcherActive = false;
+  let fallingItems = [];
+  let collectedLetters = [];
+  let lives = 3;
+  let spawnTimer = null;
+  let gameLoopTimer = null;
+  let nextLetterIdx = 0; // which letter to drop next
+  let basketX = 135;
+  let isDragging = false;
+  let areaWidth = 340;
+
+  function initCatcher() {
+    catcherActive = true;
+    fallingItems = [];
+    collectedLetters = new Array(TARGET_LETTERS.length).fill(null);
+    lives = 3;
+    nextLetterIdx = 0;
+
+    const area = document.getElementById('catcher-area');
+    areaWidth = area.offsetWidth;
+    
+    // Clear previous falling letters
+    area.querySelectorAll('.falling-letter').forEach(e => e.remove());
+
+    // Position basket
+    basketX = areaWidth / 2 - 35;
+    const basket = document.getElementById('basket');
+    basket.style.left = basketX + 'px';
+
+    // Build letter slots
+    renderSlots();
+    renderLives();
+
+    // Basket drag - mouse
+    basket.onmousedown = (e) => { isDragging = true; e.preventDefault(); };
+    document.onmousemove = (e) => {
+      if (!isDragging || !catcherActive) return;
+      moveBasket(e.clientX);
+    };
+    document.onmouseup = () => { isDragging = false; };
+
+    // Basket drag - touch
+    basket.ontouchstart = (e) => { isDragging = true; e.preventDefault(); };
+    document.ontouchmove = (e) => {
+      if (!isDragging || !catcherActive) return;
+      moveBasket(e.touches[0].clientX);
+    };
+    document.ontouchend = () => { isDragging = false; };
+
+    // Also allow tapping area to move basket
+    area.onclick = (e) => {
+      if (!catcherActive) return;
+      const rect = area.getBoundingClientRect();
+      basketX = Math.min(Math.max(e.clientX - rect.left - 35, 0), areaWidth - 70);
+      document.getElementById('basket').style.left = basketX + 'px';
+    };
+
+    // Start spawning
+    spawnLetter();
+    runGameLoop();
+  }
+
+  function moveBasket(clientX) {
+    const area = document.getElementById('catcher-area');
+    const rect = area.getBoundingClientRect();
+    basketX = Math.min(Math.max(clientX - rect.left - 35, 0), areaWidth - 70);
+    document.getElementById('basket').style.left = basketX + 'px';
+  }
+
+  function renderSlots() {
+    const el = document.getElementById('collected-word');
+    el.innerHTML = '';
+    TARGET_LETTERS.forEach((letter, i) => {
+      const slot = document.createElement('div');
+      const isFilled = collectedLetters[i] !== undefined;
+      slot.className = 'letter-slot' + (isFilled ? ' filled' : '');
+      slot.textContent = isFilled ? collectedLetters[i] : '';
+      slot.id = 'slot-' + i;
+      el.appendChild(slot);
+    });
+  }
+
+  function renderLives() {
+    const el = document.getElementById('lives-bar');
+    el.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+      const h = document.createElement('span');
+      h.textContent = i < lives ? '❤️' : '🖤';
+      el.appendChild(h);
+    }
+  }
+
+  function spawnLetter() {
+    if (!catcherActive) return;
+    const area = document.getElementById('catcher-area');
+    areaWidth = area.offsetWidth;
+
+    // Decide: 70% chance correct letter, 30% bomb
+    const isBomb = Math.random() < 0.30;
+    const div = document.createElement('div');
+    div.className = 'falling-letter' + (isBomb ? ' bomb' : '');
+    
+    let char;
+    if (isBomb) {
+      char = BOMB_CHAR;
+    } else {
+      // Drop a random letter from the target word (mix them up!)
+      char = TARGET_LETTERS[Math.floor(Math.random() * TARGET_LETTERS.length)];
+    }
+    div.textContent = char;
+
+    const x = Math.random() * (areaWidth - 40);
+    div.style.left = x + 'px';
+    div.style.top = '-40px';
+    area.appendChild(div);
+
+    const speed = 1.5 + Math.random() * 1.2;
+    fallingItems.push({ el: div, x, y: -40, speed, char, isBomb });
+
+    // Schedule next spawn
+    const delay = 900 + Math.random() * 700;
+    spawnTimer = setTimeout(spawnLetter, delay);
+  }
+
+  function runGameLoop() {
+    if (!catcherActive) return;
+    const area = document.getElementById('catcher-area');
+    const areaH = area.offsetHeight;
+
+    fallingItems = fallingItems.filter(item => {
+      item.y += item.speed;
+      item.el.style.top = item.y + 'px';
+
+      // Check collision with basket
+      const basketBottom = areaH - 10 - 36;
+      const basketTop = basketBottom;
+      if (
+        item.y + 38 >= basketTop &&
+        item.y <= basketBottom + 36 &&
+        item.x + 38 >= basketX &&
+        item.x <= basketX + 70
+      ) {
+        item.el.remove();
+        if (item.isBomb) {
+          // Lost a life
+          lives--;
+          renderLives();
+          if (lives <= 0) {
+            catcherFail();
+            return false;
+          }
+        } else {
+          // Caught a letter — any order, fill its slot
+          const totalNeeded = TARGET_LETTERS.filter(c => c === item.char).length;
+          const totalFilled = TARGET_LETTERS.filter((c,i) => c === item.char && collectedLetters[i]).length;
+          if (totalFilled < totalNeeded) {
+            // Find first unfilled slot for this char
+            let placed = 0;
+            for (let si = 0; si < TARGET_LETTERS.length; si++) {
+              if (TARGET_LETTERS[si] === item.char) {
+                if (placed === totalFilled) {
+                  collectedLetters[si] = item.char;
+                  break;
+                }
+                placed++;
+              }
+            }
+            renderSlots();
+            if (TARGET_LETTERS.every((c,i) => collectedLetters[i] === c)) {
+              catcherWin();
+              return false;
+            }
+          }
+        }
+        return false;
+      }
+
+      // Missed letter (fell off bottom) — no penalty, just remove
+      if (item.y > areaH) {
+        item.el.remove();
+        return false;
+      }
+      return true;
+    });
+
+    gameLoopTimer = requestAnimationFrame(runGameLoop);
+  }
+
+  function catcherWin() {
+    catcherActive = false;
+    clearTimeout(spawnTimer);
+    document.querySelectorAll('.falling-letter').forEach(e => e.remove());
+    launchConfetti();
+    setTimeout(() => showScreen('win'), 1200);
+  }
+
+  function catcherFail() {
+    catcherActive = false;
+    clearTimeout(spawnTimer);
+    document.querySelectorAll('.falling-letter').forEach(e => e.remove());
+    // Reset and try again
+    setTimeout(() => {
+      collectedLetters = new Array(TARGET_LETTERS.length).fill(null);
+      lives = 3;
+      fallingItems = [];
+      nextLetterIdx = 0;
+      renderSlots();
+      renderLives();
+      catcherActive = true;
+      spawnLetter();
+      runGameLoop();
+    }, 1000);
+  }
+
 </script>
+
+<!-- CATCHER SCREEN -->
+<div id="catcher" class="screen">
+  <h2 class="catcher-title">Catch the letters! 🧺</h2>
+  <p class="catcher-sub">Spell out <strong style="color:var(--pink-dark)">بحبك</strong> to unlock your surprise</p>
+  <div class="lives-bar" id="lives-bar"></div>
+  <div id="catcher-area">
+    <div id="basket">🧺</div>
+  </div>
+  <div id="collected-word"></div>
+  <p class="catcher-instruction">Move the basket with your finger or mouse 💕</p>
+</div>
+
+<!-- WIN SCREEN -->
+<div id="win" class="screen">
+  <div class="letter-card">
+    <div class="letter-heading">To my love, Saif 💕</div>
+    <p class="letter-text">
+      عايزه اقولك اني مبسوطه اوي اوي اوي اننا سوا — ايامي بقت احلى وبقا عندي حد مهم بحبه وبهتم بيه وبيعملي اللي نفسي فيه ومعيشني احلى ايام حياتي. ربنا يحفظك ليا يا حبيبي ونعيش طول عمرنا مع بعض 💕
+    </p>
+    <div class="letter-sig">— yours always 🌷</div>
+  </div>
+</div>
+
+
 </body>
 </html>
-
-
